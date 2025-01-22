@@ -1,0 +1,98 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - test-branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          cd app
+          npm install
+
+      # Step 4: Run tests
+      - name: Run tests
+        run: |
+          cd app
+          npm test
+
+      # Step 5: Configure AWS credentials
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Step 6: Login to Amazon ECR
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # Step 7: Build, tag, and push Docker image to Amazon ECR
+      - name: Build, tag, and push Docker image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: latest
+        run: |
+          cd app
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      # Step 8: Decode kubeconfig
+      - name: Decode kubeconfig
+        run: |
+          echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 --decode > /tmp/kubeconfig
+
+      # Step 9: Deploy to EKS
+      - name: Deploy to EKS
+        env:
+          KUBECONFIG: /tmp/kubeconfig
+        run: |
+          cd manifests
+          kubectl apply -f deployment.yaml
+          kubectl apply -f service.yaml
+
+      # Step 10: Debug manifests directory
+      - name: Debug manifests directory
+        run: |
+          ls -R manifests
+
+      # Step 11: Wait for deployment to stabilize
+      - name: Wait for deployment to stabilize
+        run: |
+          sleep 30  # Wait for 30 seconds
+          kubectl get pods -o wide
+
+      # Step 12: Verify deployment
+      - name: Verify deployment
+        run: |
+          kubectl get deployments -o wide
+          kubectl get pods -o wide
+
+      # Step 13: Verify service
+      - name: Verify service
+        run: |
+          kubectl get svc node-app-service -o wide
+
+      # Step 14: Check pod logs
+      - name: Check pod logs
+        run: |
+          kubectl logs -l app=node-app

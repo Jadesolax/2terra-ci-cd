@@ -1,0 +1,12 @@
+{
+    "name": "ci-cd-k8s-project",
+    "version": "1.0.0",
+    "main": "server.js",
+    "scripts": {
+      "test": "echo \"No test specified\" && exit 0"
+    },
+    "dependencies": {
+      "express": "^4.17.1"
+    }
+  }
+  
