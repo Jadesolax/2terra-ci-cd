@@ -5,4 +5,9 @@ node_modules/
 
 .terraform
 kubeconfig.yaml
+terraform/kubeconfig.yaml
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/.*
+
 
