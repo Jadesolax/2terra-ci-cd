@@ -38,7 +38,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          ##role-to-assume: arn:aws:iam::471112983834:role/<github_actions_jade
+          role-to-assume: arn:aws:iam::471112983834:role/<github_actions_jade
           aws-region: ${{ secrets.AWS_REGION }}
 
       # Step 6: Login to Amazon ECR
@@ -61,8 +61,14 @@ jobs:
       - name: Decode kubeconfig
         run: |
           echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 --decode > /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
 
-      # Step 9: Deploy to EKS
+      # Step 9: Verify cluster access
+      - name: Verify cluster access
+        run: |
+          kubectl get nodes
+
+      # Step 10: Deploy to EKS
       - name: Deploy to EKS
         env:
           KUBECONFIG: /tmp/kubeconfig
@@ -71,29 +77,29 @@ jobs:
           kubectl apply -f deployment.yaml
           kubectl apply -f service.yaml
 
-      # Step 10: Debug manifests directory
+      # Step 11: Debug manifests directory
       - name: Debug manifests directory
         run: |
           ls -R manifests
 
-      # Step 11: Wait for deployment to stabilize
+      # Step 12: Wait for deployment to stabilize
       - name: Wait for deployment to stabilize
         run: |
           sleep 30  # Wait for 30 seconds
           kubectl get pods -o wide
 
-      # Step 12: Verify deployment
+      # Step 13: Verify deployment
       - name: Verify deployment
         run: |
           kubectl get deployments -o wide
           kubectl get pods -o wide
 
-      # Step 13: Verify service
+      # Step 14: Verify service
       - name: Verify service
         run: |
           kubectl get svc node-app-service -o wide
 
-      # Step 14: Check pod logs
+      # Step 15: Check pod logs
       - name: Check pod logs
         run: |
           kubectl logs -l app=node-app
