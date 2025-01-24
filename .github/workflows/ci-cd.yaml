@@ -299,7 +299,7 @@ jobs:
       # Step 8: Configure kubectl with EKS
       - name: Configure kubectl with EKS
         run: |
-          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name YOUR_CLUSTER_NAME
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name my-eks-cluster
 
       # Step 9: Deploy to EKS
       - name: Deploy to EKS
