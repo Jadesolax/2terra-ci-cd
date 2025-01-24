@@ -1,18 +1,3 @@
-output "vpc_id" {
-  description = "ID of the VPC"
-  value       = module.vpc.vpc_id
-}
-
-output "private_subnets" {
-  description = "List of private subnet IDs"
-  value       = module.vpc.private_subnets
-}
-
-output "public_subnets" {
-  description = "List of public subnet IDs"
-  value       = module.vpc.public_subnets
-}
-
 output "eks_cluster_name" {
   description = "Name of the EKS cluster"
   value       = module.eks.cluster_name
@@ -23,8 +8,14 @@ output "eks_cluster_endpoint" {
   value       = module.eks.cluster_endpoint
 }
 
-output "kubeconfig" {
-  description = "Kubeconfig file for the EKS cluster"
-  value       = module.eks.kubeconfig
+output "eks_cluster_certificate_authority_data" {
+  description = "Base64-encoded certificate authority data for the EKS cluster"
+  value       = module.eks.cluster_certificate_authority_data
+  sensitive   = true
+}
+
+output "eks_cluster_auth_token" {
+  description = "Token for authenticating with the EKS cluster"
+  value       = data.aws_eks_cluster_auth.cluster.token
   sensitive   = true
 }
