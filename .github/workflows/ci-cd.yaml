@@ -108,6 +108,136 @@
 #           kubectl logs -l app=node-app
 
 
+# name: CI/CD Pipeline
+
+# on:
+#   push:
+#     branches:
+#       - master
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       # Step 1: Checkout code
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+
+#       # Step 2: Set up Node.js
+#       - name: Set up Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: '18'
+
+#       # Step 3: Install dependencies
+#       - name: Install dependencies
+#         run: |
+#           cd app
+#           npm install
+
+#       # Step 4: Run tests
+#       - name: Run tests
+#         run: |
+#           cd app
+#           npm test
+
+#       # Step 5: Install AWS CLI
+#       - name: Install AWS CLI
+#         run: |
+#           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+#           unzip awscliv2.zip
+#           sudo ./aws/install --update
+
+#       # Step 6: Verify AWS CLI
+#       - name: Verify AWS CLI
+#         run: |
+#           aws --version
+
+#       # Step 7: Configure AWS credentials
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v3
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ secrets.AWS_REGION }}
+
+#       # Step 8: Verify AWS credentials
+#       - name: Verify AWS credentials
+#         run: |
+#           aws sts get-caller-identity
+
+#       # Step 9: Login to Amazon ECR
+#       - name: Login to Amazon ECR
+#         id: login-ecr
+#         uses: aws-actions/amazon-ecr-login@v1
+
+#       # Step 10: Build, tag, and push Docker image to Amazon ECR
+#       - name: Build, tag, and push Docker image to Amazon ECR
+#         env:
+#           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+#           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+#           IMAGE_TAG: latest
+#         run: |
+#           cd app
+#           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+#           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+#       # Step 11: Decode kubeconfig
+#       - name: Decode kubeconfig
+#         run: |
+#           echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 --decode > /tmp/kubeconfig
+#           echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
+
+#       # Step 12: Verify kubeconfig
+#       - name: Verify kubeconfig
+#         run: |
+#           echo "KUBECONFIG is set to: $KUBECONFIG"
+#           cat $KUBECONFIG
+
+#       # Step 13: Verify cluster access
+#       - name: Verify cluster access
+#         run: |
+#           kubectl get nodes
+
+#       # Step 14: Deploy to EKS
+#       - name: Deploy to EKS
+#         run: |
+#           cd manifests
+#           kubectl apply -f deployment.yaml
+#           kubectl apply -f service.yaml
+
+#       # Step 15: Debug manifests directory
+#       - name: Debug manifests directory
+#         run: |
+#           ls -R manifests
+
+#       # Step 16: Wait for deployment to stabilize
+#       - name: Wait for deployment to stabilize
+#         run: |
+#           sleep 30  # Wait for 30 seconds
+#           kubectl get pods -o wide
+
+#       # Step 17: Verify deployment
+#       - name: Verify deployment
+#         run: |
+#           kubectl get deployments -o wide
+#           kubectl get pods -o wide
+
+#       # Step 18: Verify service
+#       - name: Verify service
+#         run: |
+#           kubectl get svc node-app-service -o wide
+
+#       # Step 19: Check pod logs
+#       - name: Check pod logs
+#         run: |
+#           kubectl logs -l app=node-app
+
+
+#####################
+
+
 name: CI/CD Pipeline
 
 on:
@@ -116,7 +246,7 @@ on:
       - master
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -142,19 +272,7 @@ jobs:
           cd app
           npm test
 
-      # Step 5: Install AWS CLI
-      - name: Install AWS CLI
-        run: |
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip awscliv2.zip
-          sudo ./aws/install --update
-
-      # Step 6: Verify AWS CLI
-      - name: Verify AWS CLI
-        run: |
-          aws --version
-
-      # Step 7: Configure AWS credentials
+      # Step 5: Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -162,74 +280,51 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # Step 8: Verify AWS credentials
-      - name: Verify AWS credentials
-        run: |
-          aws sts get-caller-identity
-
-      # Step 9: Login to Amazon ECR
+      # Step 6: Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # Step 10: Build, tag, and push Docker image to Amazon ECR
+      # Step 7: Build, tag, and push Docker image to Amazon ECR
       - name: Build, tag, and push Docker image to Amazon ECR
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          ECR_REGISTRY: 471112983834.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          ECR_REPOSITORY: my-repo
           IMAGE_TAG: latest
         run: |
           cd app
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # Step 11: Decode kubeconfig
-      - name: Decode kubeconfig
+      # Step 8: Configure kubectl with EKS
+      - name: Configure kubectl with EKS
         run: |
-          echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 --decode > /tmp/kubeconfig
-          echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name YOUR_CLUSTER_NAME
 
-      # Step 12: Verify kubeconfig
-      - name: Verify kubeconfig
-        run: |
-          echo "KUBECONFIG is set to: $KUBECONFIG"
-          cat $KUBECONFIG
-
-      # Step 13: Verify cluster access
-      - name: Verify cluster access
-        run: |
-          kubectl get nodes
-
-      # Step 14: Deploy to EKS
+      # Step 9: Deploy to EKS
       - name: Deploy to EKS
+        env:
+          ECR_REGISTRY: 471112983834.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          ECR_REPOSITORY: my-repo
+          IMAGE_TAG: latest
         run: |
           cd manifests
+          sed -i "s|<ECR_IMAGE>|$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|g" deployment.yaml
           kubectl apply -f deployment.yaml
           kubectl apply -f service.yaml
 
-      # Step 15: Debug manifests directory
-      - name: Debug manifests directory
-        run: |
-          ls -R manifests
-
-      # Step 16: Wait for deployment to stabilize
-      - name: Wait for deployment to stabilize
-        run: |
-          sleep 30  # Wait for 30 seconds
-          kubectl get pods -o wide
-
-      # Step 17: Verify deployment
+      # Step 10: Verify deployment
       - name: Verify deployment
         run: |
           kubectl get deployments -o wide
           kubectl get pods -o wide
 
-      # Step 18: Verify service
+      # Step 11: Verify service
       - name: Verify service
         run: |
-          kubectl get svc node-app-service -o wide
+          kubectl get svc -o wide
 
-      # Step 19: Check pod logs
+      # Step 12: Check pod logs
       - name: Check pod logs
         run: |
           kubectl logs -l app=node-app
