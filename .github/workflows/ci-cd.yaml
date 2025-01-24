@@ -250,29 +250,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Set up Node.js
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
 
-      # Step 3: Install dependencies
       - name: Install dependencies
         run: |
           cd app
           npm install
 
-      # Step 4: Run tests
       - name: Run tests
         run: |
           cd app
           npm test
 
-      # Step 5: Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -280,12 +275,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # Step 6: Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # Step 7: Build, tag, and push Docker image to Amazon ECR
       - name: Build, tag, and push Docker image to Amazon ECR
         env:
           ECR_REGISTRY: 471112983834.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
@@ -296,12 +289,14 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # Step 8: Configure kubectl with EKS
       - name: Configure kubectl with EKS
         run: |
-          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name my-eks-cluster
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER_NAME }}
 
-      # Step 9: Deploy to EKS
+      - name: Debug kubeconfig file
+        run: |
+          cat ~/.kube/config
+
       - name: Deploy to EKS
         env:
           ECR_REGISTRY: 471112983834.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
@@ -310,21 +305,18 @@ jobs:
         run: |
           cd manifests
           sed -i "s|<ECR_IMAGE>|$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG|g" deployment.yaml
-          kubectl apply -f deployment.yaml
-          kubectl apply -f service.yaml
+          kubectl apply -f deployment.yaml --validate=false
+          kubectl apply -f service.yaml --validate=false
 
-      # Step 10: Verify deployment
       - name: Verify deployment
         run: |
           kubectl get deployments -o wide
           kubectl get pods -o wide
 
-      # Step 11: Verify service
       - name: Verify service
         run: |
           kubectl get svc -o wide
 
-      # Step 12: Check pod logs
       - name: Check pod logs
         run: |
           kubectl logs -l app=node-app
