@@ -147,9 +147,14 @@ jobs:
         run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip awscliv2.zip
-          sudo ./aws/install
+          sudo ./aws/install --update
 
-      # Step 6: Configure AWS credentials
+      # Step 6: Verify AWS CLI
+      - name: Verify AWS CLI
+        run: |
+          aws --version
+
+      # Step 7: Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
@@ -157,17 +162,17 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # Step 7: Verify AWS credentials
+      # Step 8: Verify AWS credentials
       - name: Verify AWS credentials
         run: |
           aws sts get-caller-identity
 
-      # Step 8: Login to Amazon ECR
+      # Step 9: Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # Step 9: Build, tag, and push Docker image to Amazon ECR
+      # Step 10: Build, tag, and push Docker image to Amazon ECR
       - name: Build, tag, and push Docker image to Amazon ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -178,53 +183,53 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # Step 10: Decode kubeconfig
+      # Step 11: Decode kubeconfig
       - name: Decode kubeconfig
         run: |
           echo "${{ secrets.KUBECONFIG_BASE64 }}" | base64 --decode > /tmp/kubeconfig
           echo "KUBECONFIG=/tmp/kubeconfig" >> $GITHUB_ENV
 
-      # Step 11: Verify kubeconfig
+      # Step 12: Verify kubeconfig
       - name: Verify kubeconfig
         run: |
           echo "KUBECONFIG is set to: $KUBECONFIG"
           cat $KUBECONFIG
 
-      # Step 12: Verify cluster access
+      # Step 13: Verify cluster access
       - name: Verify cluster access
         run: |
           kubectl get nodes
 
-      # Step 13: Deploy to EKS
+      # Step 14: Deploy to EKS
       - name: Deploy to EKS
         run: |
           cd manifests
           kubectl apply -f deployment.yaml
           kubectl apply -f service.yaml
 
-      # Step 14: Debug manifests directory
+      # Step 15: Debug manifests directory
       - name: Debug manifests directory
         run: |
           ls -R manifests
 
-      # Step 15: Wait for deployment to stabilize
+      # Step 16: Wait for deployment to stabilize
       - name: Wait for deployment to stabilize
         run: |
           sleep 30  # Wait for 30 seconds
           kubectl get pods -o wide
 
-      # Step 16: Verify deployment
+      # Step 17: Verify deployment
       - name: Verify deployment
         run: |
           kubectl get deployments -o wide
           kubectl get pods -o wide
 
-      # Step 17: Verify service
+      # Step 18: Verify service
       - name: Verify service
         run: |
           kubectl get svc node-app-service -o wide
 
-      # Step 18: Check pod logs
+      # Step 19: Check pod logs
       - name: Check pod logs
         run: |
           kubectl logs -l app=node-app
