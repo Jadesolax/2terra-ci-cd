@@ -66,6 +66,7 @@ jobs:
       # Step 9: Verify cluster access
       - name: Verify cluster access
         run: |
+          echo "KUBECONFIG is set to: $KUBECONFIG"
           kubectl get nodes
 
       # Step 10: Deploy to EKS
